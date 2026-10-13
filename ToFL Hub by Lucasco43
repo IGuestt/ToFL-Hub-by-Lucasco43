@@ -1,0 +1,512 @@
+
+local Rayfield = loadstring(game:HttpGet(
+    "https://sirius.menu/rayfield"
+))()
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Player = Players.LocalPlayer
+
+-- WINDOW
+local Window = Rayfield:CreateWindow({
+    Name = "ToFL Hub",
+    Icon = 0,
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "by Luckzx43",
+    ShowText = "Rayfield",
+    Theme = "Amethyst",
+    ToggleUIKeybind = "K",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
+
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "ToFLHub.lua"
+    },
+
+    Discord = {
+        Enabled = false,
+        Invite = "noinvitelink",
+        RememberJoins = true
+    },
+
+    KeySystem = true,
+    KeySettings = {
+        Title = "ToFL Hub",
+        Subtitle = "Key System",
+        Note = "No method of obtaining the key is provided",
+        FileName = "Key",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = {"Lucky43"}
+    }
+})
+
+-- ABOUT
+local AboutTab = Window:CreateTab("About", "info")
+
+AboutTab:CreateParagraph({
+    Title = "How to use script",
+    Content = "Before using any option, activate God Mode.\nScript by: Luckzx43"
+})
+
+-- PLAYER
+local PlayerTab = Window:CreateTab("Player", "user")
+
+PlayerTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 200},
+    Increment = 1,
+    Suffix = " Speed",
+    CurrentValue = 16,
+    Flag = "WalkSpeedSlider",
+
+    Callback = function(Value)
+        local Character = Player.Character
+        local Humanoid = Character
+            and Character:FindFirstChildOfClass("Humanoid")
+
+        if Humanoid then
+            Humanoid.WalkSpeed = Value
+        end
+    end,
+})
+
+PlayerTab:CreateSlider({
+    Name = "JumpPower",
+    Range = {50, 200},
+    Increment = 1,
+    Suffix = " Power",
+    CurrentValue = 50,
+    Flag = "JumpPowerSlider",
+
+    Callback = function(Value)
+        local Character = Player.Character
+        local Humanoid = Character
+            and Character:FindFirstChildOfClass("Humanoid")
+
+        if Humanoid then
+            Humanoid.UseJumpPower = true
+            Humanoid.JumpPower = Value
+        end
+    end,
+})
+
+-- NOCLIP
+local NoclipConnection = nil
+local OriginalCollision = {}
+
+local function SetNoclip(Enabled)
+    if NoclipConnection then
+        NoclipConnection:Disconnect()
+        NoclipConnection = nil
+    end
+
+    if not Enabled then
+        for Part, OriginalValue in pairs(OriginalCollision) do
+            if Part and Part.Parent then
+                Part.CanCollide = OriginalValue
+            end
+        end
+
+        table.clear(OriginalCollision)
+        return
+    end
+
+    local function UpdateCollision()
+        local Character = Player.Character
+        if not Character then return end
+
+        for _, Part in ipairs(Character:GetDescendants()) do
+            if Part:IsA("BasePart") then
+                if OriginalCollision[Part] == nil then
+                    OriginalCollision[Part] = Part.CanCollide
+                end
+
+                Part.CanCollide = false
+            end
+        end
+    end
+
+    UpdateCollision()
+
+    NoclipConnection = RunService.Stepped:Connect(function()
+        UpdateCollision()
+    end)
+end
+
+PlayerTab:CreateToggle({
+    Name = "Noclip",
+    CurrentValue = false,
+    Flag = "NoclipToggle",
+
+    Callback = function(Value)
+        SetNoclip(Value)
+    end,
+})
+
+-- INFINITE JUMP
+local InfiniteJumpEnabled = false
+
+PlayerTab:CreateToggle({
+    Name = "Infinite Jump",
+    CurrentValue = false,
+    Flag = "InfiniteJumpToggle",
+
+    Callback = function(Value)
+        InfiniteJumpEnabled = Value
+    end,
+})
+
+UserInputService.JumpRequest:Connect(function()
+    if not InfiniteJumpEnabled then return end
+
+    local Character = Player.Character
+    local Humanoid = Character
+        and Character:FindFirstChildOfClass("Humanoid")
+
+    if Humanoid then
+        Humanoid:ChangeState(
+            Enum.HumanoidStateType.Jumping
+        )
+    end
+end)
+
+-- INFINITE YIELD
+PlayerTab:CreateButton({
+    Name = "Infinite Yield",
+
+    Callback = function()
+        local Success, ErrorMessage = pcall(function()
+            loadstring(game:HttpGet(
+                "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"
+            ))()
+        end)
+
+        if not Success then
+            warn("Infinite Yield error: " .. tostring(ErrorMessage))
+        end
+    end,
+})
+
+-- SHOP
+local ShopTab = Window:CreateTab("Shop", "store")
+
+local GearsFolder = ReplicatedStorage
+    :WaitForChild("Assets")
+    :WaitForChild("Gears")
+
+local Gears = {
+    "bomb",
+    "fusion",
+    "gravity",
+    "icecube",
+    "jump",
+    "killpart",
+    "rifle",
+    "speed",
+    "stopwatch"
+}
+
+local SelectedGear = "bomb"
+
+ShopTab:CreateDropdown({
+    Name = "Select Gear",
+    Options = Gears,
+    CurrentOption = {"bomb"},
+    MultipleOptions = false,
+
+    Callback = function(Option)
+        SelectedGear = typeof(Option) == "table"
+            and Option[1]
+            or Option
+    end
+})
+
+ShopTab:CreateButton({
+    Name = "Get Gear",
+
+    Callback = function()
+        local Gear = GearsFolder:FindFirstChild(SelectedGear)
+        local Backpack = Player:FindFirstChild("Backpack")
+
+        if not Gear or not Backpack then
+            warn("Gear or Backpack not found!")
+            return
+        end
+
+        if Gear:IsA("Tool") then
+            Gear:Clone().Parent = Backpack
+        else
+            warn("The selected item is not a Tool!")
+        end
+    end
+})
+
+-- PLAY AREA
+local PlayAreaTab = Window:CreateTab("Play area", "play")
+
+PlayAreaTab:CreateParagraph({
+    Title = "Public servers",
+    Content = [[Please follow the steps below.
+When you click the first button you will activate 2x timer in the game.]]
+})
+
+-- 2X TIMER (TROLL)
+PlayAreaTab:CreateButton({
+    Name = "2x Timer (TROLL)",
+
+    Callback = function()
+        local Character = Player.Character
+            or Player.CharacterAdded:Wait()
+
+        local Exit = workspace:FindFirstChild("Door", true)
+
+        if not Exit then
+            warn("Model 'Door' not found!")
+            return
+        end
+
+        if Exit:IsA("Model") then
+            Character:PivotTo(
+                Exit:GetPivot() + Vector3.new(0, 4, 0)
+            )
+        elseif Exit:IsA("BasePart") then
+            Character:PivotTo(
+                Exit.CFrame + Vector3.new(0, 4, 0)
+            )
+        end
+    end,
+})
+
+-- REDEEM ALL CODES
+PlayAreaTab:CreateButton({
+    Name = "Redeem All codes",
+
+    Callback = function()
+        local Codes = {
+            "free premium box",
+            "HUTRI81",
+            "box is back!",
+            "code is back!",
+            "noob"
+        }
+
+        local Network = ReplicatedStorage
+            :WaitForChild("Network")
+            :WaitForChild("Server: Redeem Code")
+
+        for _, Code in ipairs(Codes) do
+            local Success, Result = pcall(function()
+                return Network:InvokeServer(Code)
+            end)
+
+            if Success then
+                print("Code submitted: " .. Code, Result)
+            else
+                warn(
+                    "Error redeeming " .. Code .. ": "
+                    .. tostring(Result)
+                )
+            end
+
+            task.wait(0.2)
+        end
+    end,
+})
+
+-- PRIVATE SERVER
+local PrivateTab = Window:CreateTab(
+    "Private Server",
+    4483362458
+)
+
+PrivateTab:CreateSection("Farm Area")
+
+PrivateTab:CreateParagraph({
+    Title = "Private servers",
+    Content = "Join a VIP server, set the maximum number of stages to 40, activate God Mode, create the Skip + AutoEnd button, and finally create the AFK button."
+})
+
+local CommandRemote = ReplicatedStorage
+    :WaitForChild("Network")
+    :WaitForChild("Moderation: ExecuteCommand")
+
+-- SKIP TOWER
+PrivateTab:CreateButton({
+    Name = "Skip Tower",
+
+    Callback = function()
+        CommandRemote:FireServer("/skip")
+    end,
+})
+
+-- LOCK / UNLOCK TOGGLE
+PrivateTab:CreateToggle({
+    Name = "Lock Tower",
+    CurrentValue = false,
+    Flag = "LockTowerToggle",
+
+    Callback = function(Value)
+        if Value then
+            CommandRemote:FireServer("/lock")
+        else
+            CommandRemote:FireServer("/unlock")
+        end
+    end,
+})
+
+-- SET LENGTH 40 + SKIP
+PrivateTab:CreateButton({
+    Name = "Set length 40",
+
+    Callback = function()
+        CommandRemote:FireServer("/setlength 40")
+
+        task.wait(0.5)
+
+        CommandRemote:FireServer("/skip")
+    end,
+})
+
+-- AFK
+local AFKConnection = nil
+
+PrivateTab:CreateButton({
+    Name = "AFK",
+
+    Callback = function()
+        local VirtualUser = game:GetService("VirtualUser")
+
+        if AFKConnection then
+            AFKConnection:Disconnect()
+            AFKConnection = nil
+        end
+
+        AFKConnection = Player.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
+        end)
+    end,
+})
+
+-- GOD MODE
+PrivateTab:CreateButton({
+    Name = "God Mode",
+
+    Callback = function()
+        local Success, ErrorMessage = pcall(function()
+            loadstring(game:HttpGet(
+                "https://raw.githubusercontent.com/Rawbr10/Roblox-Scripts/refs/heads/main/God%20Mode%20Script%20Universal"
+            ))()
+        end)
+
+        if not Success then
+            warn("God Mode error: " .. tostring(ErrorMessage))
+        end
+    end,
+})
+
+-- AUTO SKIP + TELEPORT
+local AutoSkipEnabled = false
+
+PrivateTab:CreateToggle({
+    Name = "Auto Skip + Teleport",
+    CurrentValue = false,
+    Flag = "AutoSkipTeleport",
+
+    Callback = function(Value)
+        AutoSkipEnabled = Value
+
+        if not AutoSkipEnabled then
+            return
+        end
+
+        task.spawn(function()
+            while AutoSkipEnabled do
+                local Success, ErrorMessage = pcall(function()
+                    CommandRemote:FireServer("/skip")
+
+                    task.wait(2)
+
+                    if not AutoSkipEnabled then
+                        return
+                    end
+
+                    local Finish = workspace
+                        :WaitForChild("tower")
+                        :WaitForChild("sections")
+                        :WaitForChild("finish")
+
+                    local Character = Player.Character
+                        or Player.CharacterAdded:Wait()
+
+                    local Root = Character:WaitForChild(
+                        "HumanoidRootPart"
+                    )
+
+                    local Destination
+
+                    if Finish:IsA("BasePart") then
+                        Destination = Finish.CFrame
+                    elseif Finish:IsA("Model") then
+                        Destination = Finish:GetPivot()
+                    end
+
+                    if Destination then
+                        Root.CFrame = Destination
+                            + Vector3.new(0, 3, 0)
+                    end
+                end)
+
+                if not Success then
+                    warn(
+                        "Auto Skip error: "
+                        .. tostring(ErrorMessage)
+                    )
+
+                    AutoSkipEnabled = false
+                    break
+                end
+
+                task.wait(1)
+            end
+        end)
+    end,
+})
+
+-- THE FL | THE BEAST
+local BeastTab = Window:CreateTab(
+    "The FL | The Beast",
+    "zap"
+)
+
+BeastTab:CreateButton({
+    Name = "Get Halo",
+
+    Callback = function()
+        local Character = Player.Character
+            or Player.CharacterAdded:Wait()
+
+        local Exit = workspace:FindFirstChild("Door", true)
+
+        if not Exit then
+            warn("Model 'Door' not found!")
+            return
+        end
+
+        if Exit:IsA("Model") then
+            Character:PivotTo(
+                Exit:GetPivot() + Vector3.new(0, 4, 0)
+            )
+        elseif Exit:IsA("BasePart") then
+            Character:PivotTo(
+                Exit.CFrame + Vector3.new(0, 4, 0)
+            )
+        end
+    end,
+})
